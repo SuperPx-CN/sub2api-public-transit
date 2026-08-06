@@ -198,6 +198,8 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 
 		// Available channels feature (default disabled; opt-in)
 		SettingKeyAvailableChannelsEnabled: "false",
+		SettingKeyPublicTransitEnabled:     "true",
+		SettingKeyPublicTransitPageEnabled: "false",
 
 		// Model plaza feature (default disabled; opt-in, public unless require_auth)
 		SettingKeyModelPlazaEnabled:     "false",
@@ -811,6 +813,8 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 
 	// Available channels feature (default: disabled; strict true)
 	result.AvailableChannelsEnabled = settings[SettingKeyAvailableChannelsEnabled] == "true"
+	result.PublicTransitEnabled = !isFalseSettingValue(settings[SettingKeyPublicTransitEnabled])
+	result.PublicTransitPageEnabled = publicTransitPageEnabledFromSettings(settings)
 
 	// Model plaza feature (default: disabled; strict true)
 	result.ModelPlazaEnabled = settings[SettingKeyModelPlazaEnabled] == "true"
@@ -993,6 +997,17 @@ func isFalseSettingValue(value string) bool {
 	default:
 		return false
 	}
+}
+
+func publicTransitPageEnabledFromSettings(settings map[string]string) bool {
+	if settings == nil || isFalseSettingValue(settings[SettingKeyPublicTransitEnabled]) {
+		return false
+	}
+	value, exists := settings[SettingKeyPublicTransitPageEnabled]
+	if exists {
+		return value == "true"
+	}
+	return settings[SettingKeyPublicTransitEnabled] == "true"
 }
 
 func normalizeVisibleMethodSettingSource(method, source string, enabled bool) (string, error) {

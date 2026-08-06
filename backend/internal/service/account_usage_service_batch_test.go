@@ -70,7 +70,10 @@ func (r *usageBatchLogRepoStub) GetGroupStatsWithFilters(context.Context, time.T
 func (r *usageBatchLogRepoStub) GetUserBreakdownStats(context.Context, time.Time, time.Time, usagestats.UserBreakdownDimension, int) ([]usagestats.UserBreakdownItem, error) {
 	return nil, nil
 }
-func (r *usageBatchLogRepoStub) GetAllGroupUsageSummary(context.Context, time.Time) ([]usagestats.GroupUsageSummary, error) {
+func (r *usageBatchLogRepoStub) GetAllGroupUsageSummary(context.Context, time.Time, time.Time, time.Time) ([]usagestats.GroupUsageSummary, error) {
+	return nil, nil
+}
+func (r *usageBatchLogRepoStub) GetGroupCacheUsageSummary(context.Context, time.Time, time.Time) ([]usagestats.GroupCacheUsageSummary, error) {
 	return nil, nil
 }
 func (r *usageBatchLogRepoStub) GetAPIKeyUsageTrend(context.Context, time.Time, time.Time, string, int) ([]usagestats.APIKeyUsageTrendPoint, error) {
