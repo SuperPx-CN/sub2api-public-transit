@@ -331,6 +331,8 @@ type UpdateSettingsRequest struct {
 
 	// Available Channels feature switch (user-facing)
 	AvailableChannelsEnabled *bool `json:"available_channels_enabled"`
+	PublicTransitEnabled     *bool `json:"public_transit_enabled"`
+	PublicTransitPageEnabled *bool `json:"public_transit_page_enabled"`
 
 	// Model Plaza feature switches + description
 	ModelPlazaEnabled     *bool   `json:"model_plaza_enabled"`
@@ -1857,6 +1859,18 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 			}
 			return previousSettings.AvailableChannelsEnabled
 		}(),
+		PublicTransitEnabled: func() bool {
+			if req.PublicTransitEnabled != nil {
+				return *req.PublicTransitEnabled
+			}
+			return previousSettings.PublicTransitEnabled
+		}(),
+		PublicTransitPageEnabled: func() bool {
+			if req.PublicTransitPageEnabled != nil {
+				return *req.PublicTransitPageEnabled
+			}
+			return previousSettings.PublicTransitPageEnabled
+		}(),
 		ModelPlazaEnabled: func() bool {
 			if req.ModelPlazaEnabled != nil {
 				return *req.ModelPlazaEnabled
@@ -2284,6 +2298,8 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		ChannelMonitorDefaultIntervalSeconds: updatedSettings.ChannelMonitorDefaultIntervalSeconds,
 
 		AvailableChannelsEnabled: updatedSettings.AvailableChannelsEnabled,
+		PublicTransitEnabled:     updatedSettings.PublicTransitEnabled,
+		PublicTransitPageEnabled: updatedSettings.PublicTransitPageEnabled,
 
 		ModelPlazaEnabled:     updatedSettings.ModelPlazaEnabled,
 		ModelPlazaRequireAuth: updatedSettings.ModelPlazaRequireAuth,

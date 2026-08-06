@@ -169,9 +169,9 @@ func (s *DashboardService) GetGroupStatsWithFilters(ctx context.Context, startTi
 	return stats, nil
 }
 
-// GetGroupUsageSummary returns today's and cumulative cost for all groups.
-func (s *DashboardService) GetGroupUsageSummary(ctx context.Context, todayStart time.Time) ([]usagestats.GroupUsageSummary, error) {
-	results, err := s.usageRepo.GetAllGroupUsageSummary(ctx, todayStart)
+// GetGroupUsageSummary returns today's/cumulative cost and rolling cache usage for all groups.
+func (s *DashboardService) GetGroupUsageSummary(ctx context.Context, todayStart, since24h, since7d time.Time) ([]usagestats.GroupUsageSummary, error) {
+	results, err := s.usageRepo.GetAllGroupUsageSummary(ctx, todayStart, since24h, since7d)
 	if err != nil {
 		return nil, fmt.Errorf("get group usage summary: %w", err)
 	}

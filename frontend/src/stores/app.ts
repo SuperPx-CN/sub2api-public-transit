@@ -371,6 +371,8 @@ export const useAppStore = defineStore('app', () => {
         channel_monitor_enabled: true,
         channel_monitor_default_interval_seconds: 60,
         available_channels_enabled: false,
+        public_transit_enabled: true,
+        public_transit_page_enabled: false,
         model_plaza_enabled: false,
         model_plaza_require_auth: false,
         risk_control_enabled: false,

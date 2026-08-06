@@ -6884,6 +6884,17 @@
 
         <div class="card">
           <div class="border-b border-gray-100 px-6 py-4 dark:border-dark-700">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t('admin.settings.features.publicTransit.title') }}</h2>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t('admin.settings.features.publicTransit.description') }}</p>
+          </div>
+          <div class="space-y-5 p-6">
+            <div class="flex items-center justify-between"><div><label class="text-sm font-medium">{{ t('admin.settings.features.publicTransit.apiEnabled') }}</label><p class="mt-0.5 text-xs text-gray-500">{{ t('admin.settings.features.publicTransit.apiEnabledHint') }}</p></div><Toggle v-model="form.public_transit_enabled" /></div>
+            <div class="flex items-center justify-between border-t border-gray-100 pt-5" :class="{ 'opacity-60': !form.public_transit_enabled }"><div><label class="text-sm font-medium">{{ t('admin.settings.features.publicTransit.pageEnabled') }}</label><p class="mt-0.5 text-xs text-gray-500">{{ t('admin.settings.features.publicTransit.pageEnabledHint') }}</p></div><Toggle v-model="form.public_transit_page_enabled" :disabled="!form.public_transit_enabled" /></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="border-b border-gray-100 px-6 py-4 dark:border-dark-700">
             <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
               {{ t('admin.settings.features.riskControl.title') }}
             </h2>
@@ -9424,6 +9435,8 @@ const form = reactive<SettingsForm>({
   channel_monitor_default_interval_seconds: 60,
   // Available Channels feature switch
   available_channels_enabled: false,
+  public_transit_enabled: true,
+  public_transit_page_enabled: false,
   // Model Plaza feature switches + description
   model_plaza_enabled: false,
   model_plaza_require_auth: false,
@@ -11042,6 +11055,8 @@ async function saveSettings() {
         Number(form.channel_monitor_default_interval_seconds) || 60,
       // Available Channels feature switch
       available_channels_enabled: form.available_channels_enabled,
+      public_transit_enabled: form.public_transit_enabled,
+      public_transit_page_enabled: form.public_transit_enabled && form.public_transit_page_enabled,
       // Model Plaza feature switches + description
       model_plaza_enabled: form.model_plaza_enabled,
       model_plaza_require_auth: form.model_plaza_require_auth,

@@ -185,6 +185,12 @@ const routes: RouteRecordRaw[] = [
       titleKey: 'modelPlaza.title'
     }
   },
+  {
+    path: '/public/transit',
+    name: 'PublicTransit',
+    component: () => import('@/views/public/PublicTransitView.vue'),
+    meta: { requiresAuth: false, title: 'Public Transit' }
+  },
 
   // ==================== User Routes ====================
   {

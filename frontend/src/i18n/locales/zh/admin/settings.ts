@@ -30,6 +30,9 @@ export default {
           enabled: '启用可用渠道',
           enabledHint: '关闭后用户端侧边栏入口隐藏，接口返回空数组。',
         },
+        publicTransit: {
+          title: '公开资料出口', description: '开放标准公开快照接口，并可选开放可视化页面。', configureLink: '打开公开资料页面', apiEnabled: '公开资料接口', apiEnabledHint: '开放发现与快照接口，不暴露账号凭据。', pageEnabled: '公开资料页面', pageEnabledHint: '开放 /public/transit 给访客访问。'
+        },
         modelPlaza: {
           title: '模型广场',
           description: '以分组为单位向访客展示可用模型与价格的公开页面。默认关闭。',

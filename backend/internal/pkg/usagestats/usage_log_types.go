@@ -115,11 +115,43 @@ type EndpointStat struct {
 	ActualCost  float64 `json:"actual_cost"` // 实际扣除
 }
 
-// GroupUsageSummary represents today's and cumulative cost for a single group.
+// GroupUsageSummary represents cost plus cache usage windows for a single group.
 type GroupUsageSummary struct {
-	GroupID   int64   `json:"group_id"`
-	TodayCost float64 `json:"today_cost"`
-	TotalCost float64 `json:"total_cost"`
+	GroupID                    int64   `json:"group_id"`
+	TodayCost                  float64 `json:"today_cost"`
+	TotalCost                  float64 `json:"total_cost"`
+	TodayInputTokens           int64   `json:"today_input_tokens"`
+	TodayCacheCreationTokens   int64   `json:"today_cache_creation_tokens"`
+	TodayCacheReadTokens       int64   `json:"today_cache_read_tokens"`
+	TodayCacheHitRate          float64 `json:"today_cache_hit_rate"`
+	Last24hInputTokens         int64   `json:"last_24h_input_tokens"`
+	Last24hCacheCreationTokens int64   `json:"last_24h_cache_creation_tokens"`
+	Last24hCacheReadTokens     int64   `json:"last_24h_cache_read_tokens"`
+	Last24hCacheHitRate        float64 `json:"last_24h_cache_hit_rate"`
+	Last7dInputTokens          int64   `json:"last_7d_input_tokens"`
+	Last7dCacheCreationTokens  int64   `json:"last_7d_cache_creation_tokens"`
+	Last7dCacheReadTokens      int64   `json:"last_7d_cache_read_tokens"`
+	Last7dCacheHitRate         float64 `json:"last_7d_cache_hit_rate"`
+	TotalInputTokens           int64   `json:"total_input_tokens"`
+	TotalCacheCreationTokens   int64   `json:"total_cache_creation_tokens"`
+	TotalCacheReadTokens       int64   `json:"total_cache_read_tokens"`
+	TotalCacheHitRate          float64 `json:"total_cache_hit_rate"`
+}
+
+// GroupCacheUsageSummary represents rolling cache usage windows for a single group.
+type GroupCacheUsageSummary struct {
+	GroupID int64                 `json:"group_id"`
+	Last24h GroupCacheUsageWindow `json:"last_24h"`
+	Last7d  GroupCacheUsageWindow `json:"last_7d"`
+	Total   GroupCacheUsageWindow `json:"total"`
+}
+
+// GroupCacheUsageWindow represents cache usage within one rolling time window.
+type GroupCacheUsageWindow struct {
+	InputTokens         int64   `json:"input_tokens"`
+	CacheCreationTokens int64   `json:"cache_creation_tokens"`
+	CacheReadTokens     int64   `json:"cache_read_tokens"`
+	CacheHitRate        float64 `json:"cache_hit_rate"`
 }
 
 // GroupStat represents usage statistics for a single group

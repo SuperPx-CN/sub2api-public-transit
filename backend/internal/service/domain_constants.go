@@ -413,7 +413,9 @@ const (
 
 	// SettingKeyModelPlazaDescription stores the Markdown blurb rendered at the top of
 	// the Model Plaza page (global pricing notes, exchange rate, promotions, ...).
-	SettingKeyModelPlazaDescription = "model_plaza_description"
+	SettingKeyModelPlazaDescription    = "model_plaza_description"
+	SettingKeyPublicTransitEnabled     = "public_transit_enabled"
+	SettingKeyPublicTransitPageEnabled = "public_transit_page_enabled"
 
 	// SettingKeyUpstreamBillingProbeSettings stores the global enable switch and interval
 	// for probing remote Sub2API API-key billing metadata.

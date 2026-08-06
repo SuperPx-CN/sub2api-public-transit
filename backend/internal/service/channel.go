@@ -394,13 +394,25 @@ type ChannelUsageFields struct {
 
 // SupportedModel 渠道的一个支持模型条目（无通配符、可直接展示给用户）
 type SupportedModel struct {
-	Name     string               // 用户侧模型名
-	Platform string               // 所属平台
-	Pricing  *ChannelModelPricing // 定价详情（nil 表示未配置定价）
+	Name          string               // 用户侧模型名
+	Platform      string               // 所属平台
+	Pricing       *ChannelModelPricing // 定价详情（nil 表示未配置定价）
+	PricingSource string               // custom / standard / unknown
+	CatalogSource string               // channel / group_models_list / monitoring
 }
 
 // wildcardSuffix 是模型模式中的通配符后缀标记（仅支持尾部匹配）。
 const wildcardSuffix = "*"
+
+const (
+	ModelPriceSourceCustom   = "custom"
+	ModelPriceSourceStandard = "standard"
+	ModelPriceSourceUnknown  = "unknown"
+
+	ModelCatalogSourceChannel         = "channel"
+	ModelCatalogSourceGroupModelsList = "group_models_list"
+	ModelCatalogSourceMonitoring      = "monitoring"
+)
 
 // splitWildcardSuffix 将模型模式拆分为 (prefix, isWildcard)。
 //
@@ -539,9 +551,10 @@ func (c *Channel) SupportedModels() []SupportedModel {
 		}
 		seen[key] = struct{}{}
 		result = append(result, SupportedModel{
-			Name:     displayName,
-			Platform: platform,
-			Pricing:  pricing,
+			Name:          displayName,
+			Platform:      platform,
+			Pricing:       pricing,
+			CatalogSource: ModelCatalogSourceChannel,
 		})
 	}
 
