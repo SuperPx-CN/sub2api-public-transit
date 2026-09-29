@@ -83,7 +83,50 @@ https://your-domain.example/public/transit
 - Redis 7+
 - Docker，或官方支持的二进制部署环境
 
-构建 Docker 镜像：
+### 预构建镜像（仅 linux/amd64）
+
+本仓库通过 GitHub Actions 发布到 `ghcr.io/superpx-cn/sub2api-public-transit`。预构建镜像仅支持 `linux/amd64`；`arm64` 环境需自行构建。
+
+```bash
+# 最新一次由正式版本标签推送发布的镜像
+docker pull ghcr.io/superpx-cn/sub2api-public-transit:latest
+
+# 指定已发布版本（示例版本号，请替换为实际版本）
+docker pull ghcr.io/superpx-cn/sub2api-public-transit:1.2.3
+
+# 指定源码提交（将变量替换为完整的 40 位提交 SHA）
+COMMIT_SHA=替换为完整提交SHA
+docker pull "ghcr.io/superpx-cn/sub2api-public-transit:sha-${COMMIT_SHA}"
+```
+
+在现有 Compose 配置中将应用服务的 `image` 改为所需镜像标签，沿用原有 PostgreSQL、Redis、环境变量与持久化卷配置。
+
+### 发布与手动重建
+
+`.github/workflows/release.yml` 仅响应 `v*` 标签推送和手动触发，普通分支推送与 PR 不发布镜像。发布前须先将此工作流合入默认分支；新版本标签应指向包含此工作流的提交。
+
+- 自动发布：创建并推送 `vX.Y.Z` 或预发布标签（如 `v1.2.3-rc.1`）。版本数字不得带多余前导零；不支持 `+build` 元数据。去掉 `v` 后的镜像标签最多 128 个字符。
+- 手动重建：进入 **Actions → Release → Run workflow**，选择默认分支并在必填的 `tag` 中填写已有版本标签（如 `v1.2.3`）。实际构建源码来自该标签，而不是所选分支。标签不存在或格式错误时会在构建前失败。
+- 两种入口都发布 `:<去掉 v 的版本号>` 和 `:sha-<实际检出提交的完整 SHA>`；同一版本的自动发布与手动重建串行执行，重建会覆盖对应标签。
+- 只有正式版本的标签推送发布成功后才更新 `:latest`。预发布和所有手动重建都不更新 `:latest`；它表示最近成功自动发布的正式版本，不按版本号比较大小。
+
+工作流在 Ubuntu x86 runner 上使用根目录 Dockerfile 构建前端和嵌入前端的 Go 后端，使用 GitHub Actions 构建层缓存，并注入去掉 `v` 的版本号、标签提交 SHA 和 UTC 构建时间。镜像附带 OCI source、revision、version 和 created 标签；source 指向当前仓库。发布路径按当前仓库路径转为小写生成，因此 fork 会发布到自己的 GHCR 路径。
+
+发布使用内置 `GITHUB_TOKEN`，仅申请 `contents: read` 和 `packages: write`，无需 Docker Hub 凭据。此工作流只发布容器镜像，不创建 GitHub Release、不上传二进制附件、不回写 VERSION 或其他仓库文件，也不自动部署。
+
+**首次发布后**：GHCR 新建的包默认私有。仓库管理员需打开 GitHub 仓库的 **Packages → sub2api-public-transit → Package settings → Change visibility**，将包设为 **Public**，才能匿名拉取。保留私有时，拉取前需用具有该包读取权限和 `read:packages` scope 的 personal access token (classic) 登录 `ghcr.io`。
+
+首次 Actions 发布完成后，检查构建步骤报告的 digest 和 GHCR 包内版本/SHA 标签；正式自动发布还应检查 `latest` 指向同一 digest。拉取后可验证架构、来源与版本（替换示例版本号）：
+
+```bash
+docker image inspect ghcr.io/superpx-cn/sub2api-public-transit:1.2.3 \
+  --format '{{.Os}}/{{.Architecture}} {{index .Config.Labels "org.opencontainers.image.source"}}'
+docker run --rm ghcr.io/superpx-cn/sub2api-public-transit:1.2.3 /app/sub2api -version
+```
+
+### 本地构建
+
+构建当前主机架构的 Docker 镜像：
 
 ```bash
 docker build -t sub2api-public-transit:0.1.175 .
