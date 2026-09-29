@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sub2api.fullname" . }}
+  labels:
+    {{- include "sub2api.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  # Allow the full startup probe budget plus scheduling/readiness headroom.
+  progressDeadlineSeconds: {{ add (mul (max .Values.probes.startup.periodSeconds .Values.probes.startup.timeoutSeconds) .Values.probes.startup.failureThreshold) (default 0 .Values.probes.startup.initialDelaySeconds) 300 }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "sub2api.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "sub2api.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: sub2api
+          image: {{ include "sub2api.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "sub2api.fullname" . }}
+          env:
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "externalDatabase.existingSecret is required" .Values.externalDatabase.existingSecret | quote }}
+                  key: {{ .Values.externalDatabase.passwordKey | quote }}
+            {{- $secret := required "app.existingSecret is required" .Values.app.existingSecret }}
+            {{- range $name, $key := dict "JWT_SECRET" .Values.app.secretKeys.jwt "TOTP_ENCRYPTION_KEY" .Values.app.secretKeys.totp "ADMIN_PASSWORD" .Values.app.secretKeys.adminPassword }}
+            - name: {{ $name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secret | quote }}
+                  key: {{ $key | quote }}
+            {{- end }}
+            - name: REDIS_PASSWORD
+              {{- if .Values.externalRedis.auth.enabled }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.externalRedis.auth.existingSecret | quote }}
+                  key: {{ .Values.externalRedis.auth.passwordKey | quote }}
+              {{- else }}
+              value: ""
+              {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- range $name, $settings := .Values.probes }}
+          {{ $name }}Probe:
+            httpGet:
+              path: /health
+              port: http
+            {{- toYaml $settings | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ default (include "sub2api.fullname" .) .Values.persistence.existingClaim }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

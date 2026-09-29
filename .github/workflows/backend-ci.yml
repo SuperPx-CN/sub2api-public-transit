@@ -8,6 +8,21 @@ permissions:
   contents: read
 
 jobs:
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: azure/setup-helm@v4.3.0
+        with:
+          version: v3.21.4
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install YAML validator
+        run: python -m pip install PyYAML==6.0.2
+      - name: Lint and render application Helm Chart
+        run: sh deploy/tests/helm-chart-test.sh
+
   shell:
     runs-on: macos-15
     steps:

@@ -76,6 +76,8 @@ https://your-domain.example/public/transit
 
 ## 部署
 
+Kubernetes 用户可使用单副本应用 Helm Chart，连接外部 PostgreSQL 和 Redis；详见 [Helm 中文部署指南](deploy/HELM_CN.md)（包含持久化、Ingress/TLS、升级与备份步骤）。
+
 本增强版沿用官方 Sub2API 的部署和升级前置条件：
 
 - Linux `amd64` 或 `arm64`

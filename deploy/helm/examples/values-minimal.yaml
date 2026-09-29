@@ -1,0 +1,13 @@
+# Copy to your own values file; replace the illustrative image tag and addresses.
+# This file renders offline; it does not claim this example image tag exists.
+fullnameOverride: transit
+image:
+  tag: "REPLACE_WITH_PUBLISHED_TAG"
+externalDatabase:
+  host: postgres.example.internal
+  existingSecret: transit-secrets
+externalRedis:
+  host: redis.example.internal
+app:
+  adminEmail: admin@example.com
+  existingSecret: transit-secrets

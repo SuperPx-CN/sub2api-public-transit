@@ -1,0 +1,13 @@
+单副本应用已配置；Recreate 升级会短暂停机并可能中断 SSE/WebSocket。
+检查启动（默认探针预算 10 分钟）：
+  kubectl -n {{ .Release.Namespace }} rollout status deployment/{{ include "sub2api.fullname" . }} --timeout=15m
+本地访问（保持命令运行）：
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "sub2api.fullname" . }} 8080:{{ .Values.service.port }}
+  http://localhost:8080
+外部 Secret 内容变更后需手动重启：
+  kubectl -n {{ .Release.Namespace }} rollout restart deployment/{{ include "sub2api.fullname" . }}
+{{ if and (not .Values.persistence.existingClaim) .Values.persistence.retain }}
+卸载会保留 PVC {{ include "sub2api.fullname" . }}；重新安装请设置 persistence.existingClaim 复用。
+{{ end }}
+迁移不会随 Helm rollback 自动撤销。升级前备份 PostgreSQL、/app/data 和 Secret。
+完整说明见 deploy/HELM_CN.md。

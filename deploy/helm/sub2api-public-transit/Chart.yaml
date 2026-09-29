@@ -1,0 +1,6 @@
+apiVersion: v2
+name: sub2api-public-transit
+description: Single-instance Sub2API public transit gateway with external PostgreSQL and Redis
+type: application
+version: 0.1.0
+kubeVersion: '>=1.23.0-0'

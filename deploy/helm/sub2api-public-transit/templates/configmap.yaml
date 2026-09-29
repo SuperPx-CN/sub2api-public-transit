@@ -1,0 +1,24 @@
+{{- include "sub2api.validate" . -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "sub2api.fullname" . }}
+  labels:
+    {{- include "sub2api.labels" . | nindent 4 }}
+data:
+  AUTO_SETUP: "true"
+  DATA_DIR: /app/data
+  SERVER_HOST: 0.0.0.0
+  SERVER_PORT: "8080"
+  DATABASE_HOST: {{ required "externalDatabase.host is required" .Values.externalDatabase.host | quote }}
+  DATABASE_PORT: {{ .Values.externalDatabase.port | quote }}
+  DATABASE_USER: {{ .Values.externalDatabase.username | quote }}
+  DATABASE_DBNAME: {{ .Values.externalDatabase.database | quote }}
+  DATABASE_SSLMODE: {{ .Values.externalDatabase.sslmode | quote }}
+  REDIS_HOST: {{ required "externalRedis.host is required" .Values.externalRedis.host | quote }}
+  REDIS_PORT: {{ .Values.externalRedis.port | quote }}
+  REDIS_USERNAME: {{ .Values.externalRedis.username | quote }}
+  REDIS_DB: {{ .Values.externalRedis.database | quote }}
+  REDIS_ENABLE_TLS: {{ .Values.externalRedis.enableTLS | quote }}
+  ADMIN_EMAIL: {{ .Values.app.adminEmail | quote }}
+  TZ: {{ .Values.app.timezone | quote }}

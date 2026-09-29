@@ -1,0 +1,25 @@
+# Overlay on values-minimal.yaml; certificate Secret must already exist.
+externalDatabase:
+  sslmode: verify-full
+externalRedis:
+  port: 6380
+  username: default
+  enableTLS: true
+  auth:
+    enabled: true
+    existingSecret: transit-secrets
+# PostgreSQL lib/pq reads PGSSLROOTCERT; Go TLS reads SSL_CERT_FILE.
+# Certificates must match externalDatabase.host and externalRedis.host.
+extraEnv:
+  - name: PGSSLROOTCERT
+    value: /app/certs/ca.crt
+  - name: SSL_CERT_FILE
+    value: /app/certs/ca.crt
+extraVolumes:
+  - name: external-ca
+    secret:
+      secretName: transit-external-ca
+extraVolumeMounts:
+  - name: external-ca
+    mountPath: /app/certs
+    readOnly: true

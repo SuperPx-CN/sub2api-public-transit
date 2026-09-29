@@ -7,6 +7,7 @@ This directory contains files for deploying Sub2API on Linux servers and Apple-s
 | Method | Best For | Setup Wizard |
 |--------|----------|--------------|
 | **Docker Compose** | Quick setup, all-in-one | Not needed (auto-setup) |
+| **Helm / Kubernetes** | Single app replica with external PostgreSQL/Redis | Not needed (auto-setup) |
 | **Apple container** | Native local stack on macOS 26 | Not needed (auto-setup) |
 | **Binary Install** | Production servers, systemd | Web-based wizard |
 
@@ -14,6 +15,9 @@ This directory contains files for deploying Sub2API on Linux servers and Apple-s
 
 | File | Description |
 |------|-------------|
+| [HELM_CN.md](./HELM_CN.md) | Kubernetes Helm deployment and operations guide (中文) |
+| `helm/sub2api-public-transit/` | Application-only Helm Chart; persistent single replica |
+| `helm/examples/` | Copyable Helm values examples |
 | `docker-compose.yml` | Docker Compose configuration (named volumes) |
 | `docker-compose.local.yml` | Docker Compose configuration (local directories, easy migration) |
 | `docker-deploy.sh` | **One-click Docker deployment script (recommended)** |
