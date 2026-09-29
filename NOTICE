@@ -1,0 +1,12 @@
+ai-transit.v1 standalone read-only service
+
+Derived from the Sub2API code in this repository (upstream Wei-Shaw/sub2api).
+The original project license is retained verbatim in LICENSE.
+Public protocol DTOs, channel model catalog/pricing conversion, pricing alias
+lookup and monitor health scoring were extracted from the existing source.
+The bundled model price catalog is the existing Sub2API-distributed
+model_prices_and_context_window.json (LiteLLM-format pricing data), preserved
+without an online downloader. Its values are a versioned local snapshot,
+not a promise of current provider pricing. See git history for provenance.
+
+Compatibility baseline: ec9bd05b652d393d017ccca00b0b67d9c7ca0c72.

@@ -1,3 +1,14 @@
+{{- if and .Values.ingress.enabled (not .Values.ingress.hosts) }}
+{{- fail "ingress.hosts is required" }}
+{{- end }}
+{{- $reserved := list "SERVER_HOST" "SERVER_PORT" "PUBLIC_BASE_URL" "STATION_HOME_URL" "STATION_PRICE_URL" "STATION_MONITOR_URL" "DATABASE_HOST" "DATABASE_PORT" "DATABASE_USER" "DATABASE_DBNAME" "DATABASE_SSLMODE" "DATABASE_PASSWORD" }}
+{{- $seen := dict }}
+{{- range .Values.extraEnv }}
+{{- if or (has .name $reserved) (hasKey $seen .name) }}
+{{- fail (printf "extraEnv cannot override or duplicate %s" .name) }}
+{{- end }}
+{{- $_ := set $seen .name true }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -5,11 +16,7 @@ metadata:
   labels:
     {{- include "sub2api.labels" . | nindent 4 }}
 spec:
-  replicas: 1
-  # Allow the full startup probe budget plus scheduling/readiness headroom.
-  progressDeadlineSeconds: {{ add (mul (max .Values.probes.startup.periodSeconds .Values.probes.startup.timeoutSeconds) .Values.probes.startup.failureThreshold) (default 0 .Values.probes.startup.initialDelaySeconds) 300 }}
-  strategy:
-    type: Recreate
+  replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
       {{- include "sub2api.selectorLabels" . | nindent 6 }}
@@ -18,19 +25,17 @@ spec:
       labels:
         {{- include "sub2api.selectorLabels" . | nindent 8 }}
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:
       automountServiceAccountToken: false
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       securityContext:
         runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
-        fsGroupChangePolicy: OnRootMismatch
+        runAsUser: 10001
+        runAsGroup: 10001
         seccompProfile:
           type: RuntimeDefault
       {{- with .Values.imagePullSecrets }}
@@ -38,17 +43,17 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       containers:
-        - name: sub2api
+        - name: transit
           image: {{ include "sub2api.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop: [ALL]
           ports:
             - name: http
               containerPort: 8080
-              protocol: TCP
           envFrom:
             - configMapRef:
                 name: {{ include "sub2api.fullname" . }}
@@ -58,48 +63,36 @@ spec:
                 secretKeyRef:
                   name: {{ required "externalDatabase.existingSecret is required" .Values.externalDatabase.existingSecret | quote }}
                   key: {{ .Values.externalDatabase.passwordKey | quote }}
-            {{- $secret := required "app.existingSecret is required" .Values.app.existingSecret }}
-            {{- range $name, $key := dict "JWT_SECRET" .Values.app.secretKeys.jwt "TOTP_ENCRYPTION_KEY" .Values.app.secretKeys.totp "ADMIN_PASSWORD" .Values.app.secretKeys.adminPassword }}
-            - name: {{ $name }}
-              valueFrom:
-                secretKeyRef:
-                  name: {{ $secret | quote }}
-                  key: {{ $key | quote }}
-            {{- end }}
-            - name: REDIS_PASSWORD
-              {{- if .Values.externalRedis.auth.enabled }}
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.externalRedis.auth.existingSecret | quote }}
-                  key: {{ .Values.externalRedis.auth.passwordKey | quote }}
-              {{- else }}
-              value: ""
-              {{- end }}
             {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
-          {{- range $name, $settings := .Values.probes }}
-          {{ $name }}Probe:
-            httpGet:
-              path: /health
-              port: http
-            {{- toYaml $settings | nindent 12 }}
-          {{- end }}
+          startupProbe:
+            tcpSocket: {port: http}
+            periodSeconds: 5
+            failureThreshold: 12
+          readinessProbe:
+            tcpSocket: {port: http}
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: {port: http}
+            periodSeconds: 30
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          {{- with .Values.extraVolumeMounts }}
           volumeMounts:
-            - name: data
-              mountPath: /app/data
-            {{- with .Values.extraVolumeMounts }}
-            {{- toYaml . | nindent 12 }}
+            {{- range . }}
+            - name: {{ .name }}
+              mountPath: {{ .mountPath | quote }}
+              readOnly: true
+              {{- with .subPath }}
+              subPath: {{ . | quote }}
+              {{- end }}
             {{- end }}
+          {{- end }}
+      {{- with .Values.extraVolumes }}
       volumes:
-        - name: data
-          persistentVolumeClaim:
-            claimName: {{ default (include "sub2api.fullname" .) .Values.persistence.existingClaim }}
-        {{- with .Values.extraVolumes }}
         {{- toYaml . | nindent 8 }}
-        {{- end }}
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

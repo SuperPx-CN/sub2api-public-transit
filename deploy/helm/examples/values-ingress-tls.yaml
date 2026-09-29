@@ -1,12 +1,16 @@
-# Overlay on values-minimal.yaml. Replace domains, class, CIDR and Secret names.
+image:
+  tag: "0.2.0"
+externalDatabase:
+  host: postgres.example.internal
+  existingSecret: transit-postgres
+app:
+  publicBaseURL: https://transit.example.com
+  stationHomeURL: https://station.example.com
+  stationPriceURL: https://station.example.com/prices
+  stationMonitorURL: https://station.example.com/status
 ingress:
   enabled: true
   className: nginx
-  annotations:
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-    nginx.ingress.kubernetes.io/proxy-buffering: "off"
-    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
   hosts:
     - host: transit.example.com
       paths:
@@ -15,8 +19,3 @@ ingress:
   tls:
     - secretName: transit-tls
       hosts: [transit.example.com]
-extraEnv:
-  - name: SECURITY_TRUST_FORWARDED_IP_FOR_API_KEY_ACL
-    value: "false"
-  - name: SERVER_TRUSTED_PROXIES
-    value: "10.42.0.0/24" # Replace with the actual direct ingress proxy CIDR/IP.

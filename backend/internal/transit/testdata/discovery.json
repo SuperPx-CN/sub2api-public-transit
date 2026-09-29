@@ -1,0 +1,6 @@
+{
+  "schema_version": "ai-transit.v1",
+  "system": "sub2api",
+  "snapshot_url": "https://transit.example/api/public/transit/v1/snapshot",
+  "generated_at": "2026-01-01T00:00:00Z"
+}

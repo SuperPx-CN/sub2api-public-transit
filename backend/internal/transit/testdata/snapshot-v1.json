@@ -1,0 +1,253 @@
+{
+  "schema_version": "ai-transit.v1",
+  "system": "sub2api",
+  "generated_at": "2026-01-01T00:00:00Z",
+  "station": {
+    "name": "Fixture station",
+    "homepage_url": "",
+    "price_url": "",
+    "monitor_url": "",
+    "system_type": "sub2api"
+  },
+  "billing": {
+    "currency": "CNY",
+    "credit_currency": "USD",
+    "recharge_ratio": "1 CNY = 0.15 USD balance",
+    "recharge_multiplier": 0.15,
+    "recharge_multiplier_unit": "USD balance per 1 CNY",
+    "minimum_top_up": 5,
+    "model_basis_price": "USD per token/request from Sub2API channel pricing with LiteLLM fallback where configured",
+    "model_price_unit": "USD",
+    "standardized_price_version": "ai-transit.v1"
+  },
+  "groups": [
+    {
+      "name": "Public",
+      "platform": "openai",
+      "subscription_type": "standard",
+      "rate_multiplier": 1.25,
+      "is_exclusive": false,
+      "cache_usage": {
+        "last_24h": {
+          "period": "last_24h",
+          "input_tokens": 100,
+          "cache_creation_tokens": 20,
+          "cache_read_tokens": 30,
+          "cache_hit_rate": 20
+        },
+        "last_7d": {
+          "period": "last_7d",
+          "input_tokens": 400,
+          "cache_creation_tokens": 80,
+          "cache_read_tokens": 120,
+          "cache_hit_rate": 20
+        },
+        "total": {
+          "period": "total",
+          "input_tokens": 900,
+          "cache_creation_tokens": 100,
+          "cache_read_tokens": 1000,
+          "cache_hit_rate": 50
+        }
+      },
+      "models": [
+        {
+          "standard_model": "Alias",
+          "raw_model": "Alias",
+          "platform": "openai",
+          "billing_mode": "token",
+          "price_source": "custom",
+          "catalog_source": "channel",
+          "price": {
+            "input_usd_per_token": 0.000003,
+            "output_usd_per_token": 0.000015,
+            "cache_read_usd_per_token": 3e-7
+          },
+          "source": {
+            "upstream_type": "mixed",
+            "account_pool_type": "mixed",
+            "disclosure": "source disclosed at station level; account internals are not public"
+          },
+          "supported_protocols": [
+            "openai_chat_completions",
+            "openai_responses"
+          ],
+          "intervals": [
+            {
+              "min_tokens": 0,
+              "max_tokens": 100000,
+              "input_usd_per_token": 0.000003,
+              "output_usd_per_token": 0.000015
+            },
+            {
+              "min_tokens": 100000,
+              "input_usd_per_token": 0.000006,
+              "output_usd_per_token": 0.00003
+            }
+          ]
+        },
+        {
+          "standard_model": "catalog-model",
+          "raw_model": "catalog-model",
+          "platform": "openai",
+          "billing_mode": "token",
+          "price_source": "unknown",
+          "catalog_source": "group_models_list",
+          "source": {
+            "upstream_type": "mixed",
+            "account_pool_type": "mixed",
+            "disclosure": "source disclosed at station level; account internals are not public"
+          },
+          "supported_protocols": [
+            "openai_chat_completions",
+            "openai_responses"
+          ]
+        },
+        {
+          "standard_model": "Image",
+          "raw_model": "Image",
+          "platform": "openai",
+          "billing_mode": "per_request",
+          "price_source": "custom",
+          "catalog_source": "channel",
+          "price": {
+            "per_request_usd": 0.1,
+            "image_size_prices": {
+              "1k": 0.1,
+              "2k": 0.2,
+              "4k": 0.4
+            }
+          },
+          "source": {
+            "upstream_type": "mixed",
+            "account_pool_type": "mixed",
+            "disclosure": "source disclosed at station level; account internals are not public"
+          },
+          "supported_protocols": [
+            "openai_chat_completions",
+            "openai_responses"
+          ]
+        },
+        {
+          "standard_model": "Text",
+          "raw_model": "Text",
+          "platform": "openai",
+          "billing_mode": "token",
+          "price_source": "custom",
+          "catalog_source": "channel",
+          "price": {
+            "input_usd_per_token": 0.000003,
+            "output_usd_per_token": 0.000015,
+            "cache_read_usd_per_token": 3e-7
+          },
+          "source": {
+            "upstream_type": "mixed",
+            "account_pool_type": "mixed",
+            "disclosure": "source disclosed at station level; account internals are not public"
+          },
+          "supported_protocols": [
+            "openai_chat_completions",
+            "openai_responses"
+          ],
+          "intervals": [
+            {
+              "min_tokens": 0,
+              "max_tokens": 100000,
+              "input_usd_per_token": 0.000003,
+              "output_usd_per_token": 0.000015
+            },
+            {
+              "min_tokens": 100000,
+              "input_usd_per_token": 0.000006,
+              "output_usd_per_token": 0.00003
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "monitoring": [
+    {
+      "name": "Public check",
+      "provider": "openai",
+      "group_name": "Public",
+      "primary_model": "Text",
+      "primary_status": "operational",
+      "availability_7d": 50,
+      "availability_15d": 50,
+      "availability_30d": 50,
+      "avg_latency_7d_ms": 150,
+      "latest_latency_ms": 100,
+      "latest_ping_latency_ms": 10,
+      "last_checked_at": "2026-01-01T00:00:00Z",
+      "extra_models": [
+        {
+          "model": "Extra",
+          "status": "degraded",
+          "latency_ms": 500
+        }
+      ],
+      "models": [
+        {
+          "model": "Text",
+          "latest_status": "operational",
+          "latest_latency_ms": 100,
+          "availability_7d": 50,
+          "availability_15d": 50,
+          "availability_30d": 50,
+          "avg_latency_7d_ms": 150
+        },
+        {
+          "model": "Extra",
+          "latest_status": "degraded",
+          "latest_latency_ms": 500,
+          "availability_7d": 100,
+          "availability_15d": 100,
+          "availability_30d": 100,
+          "avg_latency_7d_ms": 500
+        }
+      ],
+      "timeline": [
+        {
+          "status": "operational",
+          "latency_ms": 100,
+          "ping_latency_ms": 10,
+          "checked_at": "2026-01-01T00:00:00Z"
+        },
+        {
+          "status": "failed",
+          "latency_ms": 200,
+          "ping_latency_ms": 20,
+          "checked_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    }
+  ],
+  "cache": {
+    "supported": true,
+    "write_unit": "USD per token",
+    "read_unit": "USD per token"
+  },
+  "disclosure": {
+    "upstream_type": "mixed",
+    "account_pool_type": "mixed",
+    "is_mixed": true,
+    "is_reverse": true,
+    "note": "Sub2API public snapshot discloses normalized pricing and availability only. Exact upstream accounts, cookies, keys and internal channel IDs are intentionally omitted."
+  },
+  "limits": {
+    "dynamic_rate_limit": "see group RPM and station policy"
+  },
+  "completeness": {
+    "has_recharge_ratio": true,
+    "has_group_multipliers": true,
+    "has_model_pricing": true,
+    "has_monitoring": true,
+    "has_source_disclosure": true,
+    "warnings": null
+  },
+  "endpoints": {
+    "discovery_url": "https://transit.example/.well-known/ai-transit.json",
+    "snapshot_url": "https://transit.example/api/public/transit/v1/snapshot"
+  }
+}

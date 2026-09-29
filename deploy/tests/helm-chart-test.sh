@@ -1,5 +1,9 @@
 #!/bin/sh
 set -eu
-repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
-command -v helm >/dev/null 2>&1 || { printf 'helm is required\n' >&2; exit 1; }
-exec python3 "$repo_root/deploy/tests/helm_chart_test.py"
+chart=deploy/helm/sub2api-public-transit
+for values in deploy/helm/examples/*.yaml; do
+  helm lint "$chart" -f "$values"
+  helm template transit "$chart" -f "$values" > /tmp/ai-transit-helm-rendered.yaml
+  if grep -Eq 'kind: PersistentVolumeClaim|REDIS_|ADMIN_PASSWORD|JWT_SECRET|/app/data|httpGet:' /tmp/ai-transit-helm-rendered.yaml; then exit 1; fi
+done
+if helm template transit "$chart" >/dev/null 2>&1; then echo 'missing required values accepted'; exit 1; fi

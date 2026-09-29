@@ -1,38 +1,25 @@
-# See ../../HELM_CN.md. Secrets must exist in the release namespace.
 nameOverride: ""
 fullnameOverride: ""
+replicaCount: 1
 image:
   repository: ghcr.io/superpx-cn/sub2api-public-transit
-  tag: "" # Required unless digest is set; use an immutable release tag.
-  digest: "" # sha256:...; takes precedence over tag.
+  tag: ""
+  digest: ""
   pullPolicy: IfNotPresent
 imagePullSecrets: []
 externalDatabase:
   host: ""
   port: 5432
-  username: sub2api
+  username: transit_reader
   database: sub2api
-  sslmode: disable # disable, require, verify-ca, verify-full (lib/pq)
+  sslmode: require
   existingSecret: ""
   passwordKey: DATABASE_PASSWORD
-externalRedis:
-  host: ""
-  port: 6379
-  username: "" # Optional Redis ACL user.
-  database: 0
-  enableTLS: false
-  auth:
-    enabled: false
-    existingSecret: ""
-    passwordKey: REDIS_PASSWORD
 app:
-  adminEmail: admin@sub2api.local
-  timezone: Asia/Shanghai
-  existingSecret: ""
-  secretKeys:
-    jwt: JWT_SECRET
-    totp: TOTP_ENCRYPTION_KEY
-    adminPassword: ADMIN_PASSWORD
+  publicBaseURL: ""
+  stationHomeURL: ""
+  stationPriceURL: ""
+  stationMonitorURL: ""
 service:
   type: ClusterIP
   port: 8080
@@ -41,36 +28,14 @@ ingress:
   enabled: false
   className: ""
   annotations: {}
-  hosts: [] # [{host: transit.example.com, paths: [{path: /, pathType: Prefix}]}]
-  tls: [] # [{secretName: transit-tls, hosts: [transit.example.com]}]
-persistence:
-  existingClaim: "" # Suppresses PVC creation; same namespace required.
-  size: 1Gi
-  storageClass: "" # Empty: cluster default; "-": explicitly no StorageClass.
-  retain: true # Reuse retained PVC via existingClaim on reinstall.
-resources: {} # Size requests/limits for your workload before production use.
-nodeSelector:
-  kubernetes.io/os: linux
-  kubernetes.io/arch: amd64
+  hosts: []
+  tls: []
+resources: {}
+nodeSelector: {}
 tolerations: []
 affinity: {}
 podAnnotations: {}
-terminationGracePeriodSeconds: 60
-probes:
-  startup:
-    periodSeconds: 10
-    timeoutSeconds: 5
-    failureThreshold: 60 # 10 minutes; increase for slow initialization/migrations.
-  readiness:
-    periodSeconds: 10
-    timeoutSeconds: 5
-    failureThreshold: 3
-  liveness:
-    periodSeconds: 30
-    timeoutSeconds: 5
-    failureThreshold: 3
-# Kubernetes EnvVar / Volume / VolumeMount objects. Managed env, the data volume
-# and /app/data cannot be overridden. Use valueFrom for extra credentials.
+terminationGracePeriodSeconds: 30
 extraEnv: []
 extraVolumes: []
 extraVolumeMounts: []
