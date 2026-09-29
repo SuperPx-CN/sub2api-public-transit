@@ -9,8 +9,8 @@ const (
 )
 
 type GroupModelsListConfig struct {
-	Enabled bool
-	Models  []string
+	Enabled bool     `json:"enabled"`
+	Models  []string `json:"models"`
 }
 type Group struct {
 	ID                                       int64
@@ -19,6 +19,7 @@ type Group struct {
 	IsExclusive                              bool
 	ImagePrice1K, ImagePrice2K, ImagePrice4K *float64
 	ModelsListConfig                         GroupModelsListConfig
+	ModelAllowlist                           GroupModelAllowlist
 }
 
 func (g Group) CustomModelsListEnabled() bool {

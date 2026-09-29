@@ -39,7 +39,7 @@ func TestPostgresReadOnly(t *testing.T) {
 			t.Fatal(e)
 		}
 	}
-	exec("CREATE ROLE transit_fixture_reader LOGIN PASSWORD 'fixture-reader'; GRANT CONNECT ON DATABASE transit_test TO transit_fixture_reader; GRANT USAGE ON SCHEMA public TO transit_fixture_reader; GRANT SELECT ON settings,groups,channels,channel_groups,channel_model_pricing,channel_pricing_intervals,usage_logs,channel_monitor_histories,channel_monitor_v2_config,channel_monitor_v2_watermarks,channel_monitor_v2_metrics_rollup,channel_monitor_v2_latency_histograms_rollup,channel_monitor_v2_error_metrics_rollup TO transit_fixture_reader; GRANT SELECT(id,name,provider,group_name,primary_model,extra_models,enabled) ON channel_monitors TO transit_fixture_reader; ALTER ROLE transit_fixture_reader SET default_transaction_read_only=on")
+	exec("CREATE ROLE transit_fixture_reader LOGIN PASSWORD 'fixture-reader'; GRANT CONNECT ON DATABASE transit_test TO transit_fixture_reader; GRANT USAGE ON SCHEMA public TO transit_fixture_reader; GRANT SELECT ON settings,channels,channel_groups,channel_model_pricing,channel_pricing_intervals,usage_logs,channel_monitor_histories,channel_monitor_v2_config,channel_monitor_v2_watermarks,channel_monitor_v2_metrics_rollup,channel_monitor_v2_latency_histograms_rollup,channel_monitor_v2_error_metrics_rollup TO transit_fixture_reader; GRANT SELECT(id,name,platform,subscription_type,rate_multiplier,image_price_1k,image_price_2k,image_price_4k,status,is_exclusive,deleted_at,models_list_config) ON groups TO transit_fixture_reader; GRANT SELECT(id,name,provider,group_name,primary_model,extra_models,enabled) ON channel_monitors TO transit_fixture_reader; ALTER ROLE transit_fixture_reader SET default_transaction_read_only=on")
 	u, e := url.Parse(dsn)
 	if e != nil {
 		t.Fatal(e)
@@ -162,11 +162,7 @@ func TestPostgresReadOnly(t *testing.T) {
 		}
 	}
 	exec("ALTER TABLE missing_core RENAME TO groups")
-	exec("ALTER TABLE groups RENAME COLUMN models_list_config TO unsupported_models")
-	if w = request(NewHandler(s, c), "GET", PublicTransitSnapshotPath); w.Code != 503 {
-		t.Fatal("incompatible column", w.Code)
-	}
-	exec("ALTER TABLE groups RENAME COLUMN unsupported_models TO models_list_config")
+	t.Run("group model compatibility", func(t *testing.T) { testGroupModelCompatibility(t, admin, s, c) })
 
 	exec("ALTER TABLE settings RENAME TO missing_settings")
 	for _, path := range []string{PublicTransitSnapshotPath, PublicTransitWellKnownPath} {

@@ -9,4 +9,9 @@ model_prices_and_context_window.json (LiteLLM-format pricing data), preserved
 without an online downloader. Its values are a versioned local snapshot,
 not a promise of current provider pricing. See git history for provenance.
 
-Compatibility baseline: ec9bd05b652d393d017ccca00b0b67d9c7ca0c72.
+Extraction baseline: ec9bd05b652d393d017ccca00b0b67d9c7ca0c72.
+Upstream compatibility starts at Sub2API v0.2.8
+(fd80b08c90b55edcad5b00171b53f08721d30da1). Pure group allowlist matching
+and its model alias helpers derive from that tag; existing pure pricing
+helpers are reused. No upstream account, routing or gateway services are included.
+See docs/sub2api-compatibility.md for source paths and schema compatibility.

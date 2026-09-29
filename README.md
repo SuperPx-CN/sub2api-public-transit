@@ -37,11 +37,11 @@ PUBLIC_BASE_URL 必填，必须为 HTTP(S) origin，不含用户名、路径前�
 - 数据库不可用、核心结构不兼容、权限不足或查询失败返回 503，响应仅包含 service unavailable，不泄露 SQL、连接串或凭据。
 - 使用数据库连接 default_transaction_read_only=on、只读事务和 SELECT 白名单；快照使用 repeatable-read。没有迁移器、DDL/DML、后台刷新或 Redis 客户端。
 - 进程内快照缓存 60 秒，由请求触发刷新；每次请求仍核验开关、数据库连通性和核心读取权限。成功的聚合快照在 TTL 内可保持旧值；失败不缓存、不延长旧数据有效期。
-- 渠道 mapping 与 pricing 并集、大小写去重、区间价格、图片尺寸价、分组自定义目录保持原语义。分组倍率单独输出，不再次乘入模型价格。价格单位为 USD/token 或 USD/request，不能当作每百万 token。
+- 渠道 mapping 与 pricing 并集、大小写去重、区间价格、图片尺寸价、旧字段的分组自定义目录保持原语义；新字段 `model_allowlist` 启用时按客户端可见模型名筛选现有目录，空白名单返回空模型数组。分组倍率单独输出，不再次乘入模型价格。价格单位为 USD/token 或 USD/request，不能当作每百万 token。
 - 标准定价使用随二进制嵌入的本地资料和提取的原有别名/回退规则；可用 PRICING_FILE 指定只读 JSON 文件。启动时加载一次，不联网、不下载、不定时更新。资料来源和版本随代码版本追踪。
 - 缓存命中率与监控 v1 可用率沿用百分比（0–100）；监控 v2 success/request 沿用比例（0–1），不擅自改变既有字段单位。
 - 监控开关、模式和 v2 平台/模型/分组配置继续生效。v1 读取已存历史；v2 读取已有 12 小时 rollup、错误分类、直方图和覆盖水位，沿用忽略错误和健康评分规则。没有样本时返回空 monitoring；所需可选监控表缺失时通过 completeness.warnings 说明。已有表缺列或权限不足属于读取故障，返回 503。
-- 兼容基线为本仓库精简前 Sub2API 结构，不能保证任意上游版本兼容；结构差异必须由运维确认，不自动修改源数据库。
+- 本项目修复版本为 **0.2.1**，上游兼容起点为 **Sub2API v0.2.8**，两者是独立版本线。运行时按 `model_allowlist` → `models_list_config` → 无配置选择字段；两列均缺失时仍返回渠道定价目录并告警，不要求补建旧列。已有选中列的权限、类型或配置解析错误仍返回 503。兼容范围、白名单别名语义和官方来源见 [兼容性记录](docs/sub2api-compatibility.md)；不自动修改源数据库，也不承诺任意未来上游结构兼容。
 
 ## 配置
 
@@ -67,7 +67,7 @@ sh deploy/tests/source-check.sh    # 无旧网关、Redis、定时器和写 SQL
 sh deploy/tests/isolation-test.sh   # 临时 PostgreSQL、只读角色、镜像构建和容器冒烟
 ~~~
 
-集成脚本只创建并删除本机临时容器，不使用现网连接。测试 fixture 位于 backend/internal/transit/testdata/schema.sql，不是生产迁移。只有显式设置 TEST_DATABASE_URL 才会运行数据库测试，数据库名称必须为 transit_test，且必须为空的一次性测试库。不要指向共享数据库。固定 JSON 回归样本覆盖发现文档、v1/v2 快照、定价、目录过滤、缓存统计及公开字段。
+集成脚本只创建并删除本机临时容器，不使用现网连接。测试 fixture 位于 backend/internal/transit/testdata/schema.sql，不是生产迁移。只有显式设置 TEST_DATABASE_URL 才会运行数据库测试，数据库名称必须为 transit_test，且必须为空的一次性测试库。不要指向共享数据库。固定 JSON 回归样本覆盖发现文档、v1/v2 快照、定价、目录过滤、缓存统计及公开字段。集成测试另覆盖新列/旧列/两列/无列、列级授权、错误配置、search_path 和缓存到期后的字段更名。
 
 镜像继续通过现有 vX.Y.Z 标签 / 手动重建流程发布到当前仓库 GHCR，保留版本、commit 和稳定版 latest 标签。没有 Chart 发布流程。
 

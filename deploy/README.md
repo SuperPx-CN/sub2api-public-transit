@@ -1,6 +1,6 @@
 # 部署与旧版本迁移
 
-这是独立只读资料服务。仅连接已有外部 PostgreSQL，不创建业务数据库、不迁移、不写业务表，不连接 Redis。Chart 版本为 0.2.0；默认一个副本，纯 Go 镜像以 UID/GID 10001 运行，根文件系统可设为只读，无 PVC 和 /app/data 要求。
+这是独立只读资料服务。仅连接已有外部 PostgreSQL，不创建业务数据库、不迁移、不写业务表，不连接 Redis。Chart 版本为 0.2.1；默认一个副本，纯 Go 镜像以 UID/GID 10001 运行，根文件系统可设为只读，无 PVC 和 /app/data 要求。
 
 ## 数据库授权
 
@@ -15,7 +15,7 @@ ALTER ROLE transit_reader SET default_transaction_read_only = on;
 
 GRANT SELECT (key, value) ON settings TO transit_reader;
 GRANT SELECT (id, name, platform, subscription_type, rate_multiplier,
-  image_price_1k, image_price_2k, image_price_4k, models_list_config,
+  image_price_1k, image_price_2k, image_price_4k,
   status, is_exclusive, deleted_at) ON groups TO transit_reader;
 GRANT SELECT (id, name, status, model_mapping) ON channels TO transit_reader;
 GRANT SELECT (id, channel_id, group_id) ON channel_groups TO transit_reader;
@@ -28,6 +28,28 @@ GRANT SELECT (id, pricing_id, min_tokens, max_tokens, tier_label, input_price,
 GRANT SELECT (group_id, created_at, input_tokens, cache_creation_tokens,
   cache_read_tokens) ON usage_logs TO transit_reader;
 ~~~
+
+分组模型配置列单独授权。先在目标数据库、使用应用相同的 `search_path` 检查实际字段：
+
+~~~sql
+SELECT attname, format_type(atttypid, atttypmod) AS column_type
+FROM pg_catalog.pg_attribute
+WHERE attrelid = 'groups'::regclass AND attnum > 0 AND NOT attisdropped
+  AND attname IN ('model_allowlist', 'models_list_config')
+ORDER BY CASE attname WHEN 'model_allowlist' THEN 0 ELSE 1 END;
+~~~
+
+仅执行与结果匹配的一条授权；不要对不存在的列执行 GRANT：
+
+~~~sql
+-- 存在新列时（Sub2API v0.2.8 已包含）：只授权新列，包括两列并存情况。
+GRANT SELECT (model_allowlist) ON groups TO transit_reader;
+
+-- 仅存在旧列时：改为执行下面这条，不执行上面的新列授权。
+-- GRANT SELECT (models_list_config) ON groups TO transit_reader;
+~~~
+
+两列均不存在时无需配置列授权，仍返回渠道/定价目录并在 `completeness.warnings` 告警。不要为本服务补建旧列。字段存在但未授权、字段类型不是 JSON/JSONB，或公开分组的配置无法解析时，两个接口均返回 503；不会绕过新列改读旧列。两列并存且新列关闭、为 `{}` 或 NULL 时仍只按新列处理。
 
 只对实际存在且需要公开的监控表授权；缺失的可选表会产生完整度告警，不要求创建它们：
 
@@ -58,7 +80,9 @@ v2 histogram 仅使用 user_id=0 的公共聚合，不输出内部维度 ID。ac
 
 ## 数据结构基线
 
-核心表及所需列以以上 GRANT 清单为准，JSON 字段需保持原结构：models_list_config={enabled,models}；model_mapping={platform:{source:target}}；pricing.models 为字符串数组。groups.status='active'、is_exclusive=false、deleted_at IS NULL 才能公开。settings 只读取 public_transit_enabled、site_name、contact_info、MIN_RECHARGE_AMOUNT、BALANCE_RECHARGE_MULTIPLIER、channel_monitor_enabled、channel_monitor_mode。
+本项目版本 **0.2.1** 与上游 Sub2API 版本是两条独立版本线，兼容起点为 **Sub2API v0.2.8**（该版本已包含新列及迁移 235/236）。核心表及所需列以以上基础 GRANT 清单为准；可选配置列按 `model_allowlist` → `models_list_config` → 无配置选择，JSON/JSONB 结构均为 `{enabled,models}`。`model_mapping={platform:{source:target}}`；`pricing.models` 为字符串数组。groups.status='active'、is_exclusive=false、deleted_at IS NULL 才能公开。settings 只读取 public_transit_enabled、site_name、contact_info、MIN_RECHARGE_AMOUNT、BALANCE_RECHARGE_MULTIPLIER、channel_monitor_enabled、channel_monitor_mode。
+
+旧配置仅补充分组目录；新配置开启时按 v0.2.8 的白名单匹配规则筛选现有渠道/定价候选，匹配客户端可见模型名，保留价格和来源。启用但列表为空时输出空数组，不生成通配模型或未确认支持的模型。模型别名范围与已核实来源见 [兼容性记录](../docs/sub2api-compatibility.md)。每次请求重新探测配置字段；已生成快照可在 60 秒 TTL 内保持旧值，到期刷新后采用新结构，无需重启。
 
 监控 v1 要求 channel_monitors 与 channel_monitor_histories；v2 要求 config、metrics_rollup、latency_histograms_rollup、error_metrics_rollup、watermarks。v2 使用 bucket_seconds=43200 的既有结果，依赖源 Sub2API 自行生成；本服务不会启动聚合器或更新水位。只有 1m 表、没有对应 rollup 的旧库会得到完整度告警。现有表的缺列、类型不匹配或权限错误返回 503。不要用测试 fixture“修补”生产库。
 
@@ -93,7 +117,7 @@ startup/readiness/liveness 均为 TCP 探针，故探针只说明 HTTP 进程在
 
 ## 从旧部署迁移
 
-1. 保存现有 values、Secret 引用和 PVC 名称，确认新的只读角色和上述表结构；先渲染 0.2.0 的部署并审核。
+1. 保存现有 values、Secret 引用和 PVC 名称，确认新的只读角色和上述表结构；先渲染 0.2.1 的部署并审核。
 2. 新建最小 values，指定外部 PostgreSQL、PUBLIC_BASE_URL 和数据库密码 Secret；删除 externalRedis、app 管理凭据、persistence 等旧配置。不要使用 --reuse-values 将全部旧参数带入。
 3. 需要原站页面链接时显式设置 STATION_*_URL；更新采集方为两个标准接口。旧别名、/public/transit、/health、所有认证和网关路径永久移除。
 4. 检查旧 release 中 PVC 的 helm.sh/resource-policy。如果旧 PVC 没有 keep 策略，应先由运维制定保留方案或使用新的 release 名并行切换，避免 Helm 删除旧 release 中已不再渲染的资源。新 Chart 不包含删除 PVC、Secret 或数据库的 hook。

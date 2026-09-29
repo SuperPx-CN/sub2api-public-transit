@@ -260,12 +260,18 @@ func buildPublicTransitGroups(configuredGroups []Group, channels []AvailableChan
 				if m.Platform != g.Platform {
 					continue
 				}
+				group := groupByKey[key]
+				if group.ModelAllowlist.Enabled && (strings.TrimSpace(m.Name) == "" || strings.Contains(m.Name, "*")) {
+					continue
+				}
+				if !group.ModelAllowlist.Allows(m.Name) {
+					continue
+				}
 				modelKey := strings.ToLower(m.Platform + "\x00" + m.Name)
 				if _, exists := modelSeen[key][modelKey]; exists {
 					continue
 				}
 				modelSeen[key][modelKey] = struct{}{}
-				group := groupByKey[key]
 				out.Models = append(out.Models, toPublicTransitModel(m, group))
 			}
 		}

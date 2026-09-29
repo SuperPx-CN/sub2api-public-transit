@@ -82,6 +82,14 @@ func (s *Store) Enabled(ctx context.Context) error {
 	if err = rows.Close(); err != nil {
 		return err
 	}
+	column, err := detectGroupModelConfig(ctx, tx)
+	if err != nil {
+		return err
+	}
+	// Check the selected column's privilege and data even on discovery/cache hits.
+	if err = readGroupModelConfigs(ctx, tx, column, nil); err != nil {
+		return err
+	}
 	return tx.Commit()
 }
 func (s *Store) Snapshot(ctx context.Context) (*PublicTransitSnapshot, error) {
@@ -97,7 +105,11 @@ func (s *Store) Snapshot(ctx context.Context) (*PublicTransitSnapshot, error) {
 	if isFalse(vals["public_transit_enabled"]) {
 		return nil, ErrDisabled
 	}
-	groups, err := loadGroups(ctx, tx)
+	column, err := detectGroupModelConfig(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	groups, err := loadGroups(ctx, tx, column)
 	if err != nil {
 		return nil, err
 	}
@@ -116,6 +128,9 @@ func (s *Store) Snapshot(ctx context.Context) (*PublicTransitSnapshot, error) {
 	}
 	if err = tx.Commit(); err != nil {
 		return nil, err
+	}
+	if column == groupModelConfigNone {
+		warnings = append(warnings, missingGroupModelConfigWarning)
 	}
 	return assemble(s.Config, vals, buildPublicTransitGroups(groups, channels, usage, s.Pricing), monitors, warnings, now), nil
 }
@@ -151,22 +166,32 @@ func assemble(c Config, vals map[string]string, groups []PublicTransitGroup, mon
 		Endpoints: PublicTransitEndpoints{DiscoveryURL: absoluteURL(c.PublicBaseURL, PublicTransitWellKnownPath), SnapshotURL: absoluteURL(c.PublicBaseURL, PublicTransitSnapshotPath)},
 	}
 }
-func loadGroups(ctx context.Context, tx *sql.Tx) ([]Group, error) {
+func loadGroups(ctx context.Context, tx *sql.Tx, column groupModelConfigColumn) ([]Group, error) {
 	out := []Group{}
-	err := readRows(ctx, tx, "SELECT id,name,platform,subscription_type,rate_multiplier,image_price_1k,image_price_2k,image_price_4k,models_list_config FROM groups WHERE status='active' AND NOT is_exclusive AND deleted_at IS NULL ORDER BY id", nil, func(r *sql.Rows) error {
+	err := readRows(ctx, tx, "SELECT id,name,platform,subscription_type,rate_multiplier,image_price_1k,image_price_2k,image_price_4k FROM groups WHERE status='active' AND NOT is_exclusive AND deleted_at IS NULL ORDER BY id", nil, func(r *sql.Rows) error {
 		var g Group
-		var raw []byte
-		if err := r.Scan(&g.ID, &g.Name, &g.Platform, &g.SubscriptionType, &g.RateMultiplier, &g.ImagePrice1K, &g.ImagePrice2K, &g.ImagePrice4K, &raw); err != nil {
+		if err := r.Scan(&g.ID, &g.Name, &g.Platform, &g.SubscriptionType, &g.RateMultiplier, &g.ImagePrice1K, &g.ImagePrice2K, &g.ImagePrice4K); err != nil {
 			return err
-		}
-		if len(raw) > 0 {
-			if err := json.Unmarshal(raw, &g.ModelsListConfig); err != nil {
-				return err
-			}
 		}
 		g.Status = StatusActive
 		out = append(out, g)
 		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	byID := make(map[int64]*Group, len(out))
+	for i := range out {
+		byID[out[i].ID] = &out[i]
+	}
+	err = readGroupModelConfigs(ctx, tx, column, func(id int64, cfg GroupModelsListConfig) {
+		if g := byID[id]; g != nil {
+			if column == groupModelConfigAllowlist {
+				g.ModelAllowlist = GroupModelAllowlist(cfg)
+			} else {
+				g.ModelsListConfig = cfg
+			}
+		}
 	})
 	return out, err
 }
@@ -309,7 +334,7 @@ func loadUsage(ctx context.Context, tx *sql.Tx, now time.Time) (map[int64]Public
 }
 func sortIDs(ids []int64) { sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] }) }
 
-const coreSchemaQuery = "SELECT g.id,g.name,g.platform,g.subscription_type,g.rate_multiplier,g.image_price_1k,g.image_price_2k,g.image_price_4k,g.models_list_config,g.status,g.is_exclusive,g.deleted_at,c.id,c.name,c.status,c.model_mapping,cg.id,cg.channel_id,cg.group_id,p.id,p.channel_id,p.platform,p.models,p.billing_mode,p.input_price,p.output_price,p.cache_write_price,p.cache_read_price,p.image_output_price,p.per_request_price,i.id,i.pricing_id,i.min_tokens,i.max_tokens,i.tier_label,i.input_price,i.output_price,i.cache_write_price,i.cache_read_price,i.per_request_price,i.sort_order,u.group_id,u.created_at,u.input_tokens,u.cache_creation_tokens,u.cache_read_tokens FROM groups g,channels c,channel_groups cg,channel_model_pricing p,channel_pricing_intervals i,usage_logs u WHERE false"
+const coreSchemaQuery = "SELECT g.id,g.name,g.platform,g.subscription_type,g.rate_multiplier,g.image_price_1k,g.image_price_2k,g.image_price_4k,g.status,g.is_exclusive,g.deleted_at,c.id,c.name,c.status,c.model_mapping,cg.id,cg.channel_id,cg.group_id,p.id,p.channel_id,p.platform,p.models,p.billing_mode,p.input_price,p.output_price,p.cache_write_price,p.cache_read_price,p.image_output_price,p.per_request_price,i.id,i.pricing_id,i.min_tokens,i.max_tokens,i.tier_label,i.input_price,i.output_price,i.cache_write_price,i.cache_read_price,i.per_request_price,i.sort_order,u.group_id,u.created_at,u.input_tokens,u.cache_creation_tokens,u.cache_read_tokens FROM groups g,channels c,channel_groups cg,channel_model_pricing p,channel_pricing_intervals i,usage_logs u WHERE false"
 
 func numericSetting(value string, fallback float64) float64 {
 	n, e := strconv.ParseFloat(value, 64)

@@ -19,6 +19,19 @@ port=$(docker port "$name-db" 5432/tcp | cut -d: -f2)
 docker build -t "$image" .
 docker run -d --name "$name-http" --network "$name" -p 127.0.0.1::8080 --read-only --cap-drop ALL --security-opt no-new-privileges -e PUBLIC_BASE_URL=https://transit.example -e DATABASE_HOST="$name-db" -e DATABASE_DBNAME=transit_test -e DATABASE_USER=transit_fixture_reader -e DATABASE_PASSWORD=fixture-reader -e REDIS_HOST=unused.invalid "$image" >/dev/null
 port=$(docker port "$name-http" 8080/tcp | cut -d: -f2)
-python3 deploy/tests/smoke.py "http://127.0.0.1:$port"
+python3 deploy/tests/smoke.py "http://127.0.0.1:$port" 'Alias,catalog-model,Image,Text'
 test "$(docker inspect --format '{{.Config.User}}' "$name-http")" = '10001:10001'
+# Exercise the built image against each configuration shape in this disposable
+# database. Restart only our test container to discard its 60-second cache.
+# Runtime rename/cache expiry without restart is covered by the Go integration test.
+smoke_schema() {
+  docker exec "$name-db" psql -v ON_ERROR_STOP=1 -U postgres -d transit_test -c "$1" >/dev/null
+  docker restart "$name-http" >/dev/null
+  port=$(docker port "$name-http" 8080/tcp | cut -d: -f2)
+  python3 deploy/tests/smoke.py "http://127.0.0.1:$port" "$2" "${3:-}"
+}
+smoke_schema 'ALTER TABLE groups RENAME COLUMN models_list_config TO model_allowlist' 'Text'
+smoke_schema "ALTER TABLE groups ADD COLUMN models_list_config jsonb DEFAULT '{\"enabled\":true,\"models\":[\"legacy-only\"]}'; UPDATE groups SET model_allowlist='{}'" 'Alias,Image,Text'
+smoke_schema "UPDATE groups SET model_allowlist='{\"enabled\":true,\"models\":[]}'" ''
+smoke_schema 'ALTER TABLE groups DROP COLUMN model_allowlist; ALTER TABLE groups DROP COLUMN models_list_config' 'Alias,Image,Text' 'missing-config'
 echo 'Read-only PostgreSQL, image build and container smoke passed.'
